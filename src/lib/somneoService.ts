@@ -4,7 +4,16 @@ import { retryAsync } from 'ts-retry';
 import { RelaxeBreatheProgramPreferences, SunsetProgramPreferences } from './somneoClock';
 import { SomneoConstants } from './somneoConstants';
 // eslint-disable-next-line max-len
-import { AudioDeviceSettings, LightSettings, RelaxBreatheProgramSettings, SensorReadings, SunsetProgramSettings } from './somneoServiceDataTypes';
+import {
+  AudioDeviceSettings,
+  LightSettings,
+  RelaxBreatheProgramSettings,
+  SensorReadings,
+  SunsetProgramSettings,
+  WakeAlarmControl,
+  WakeAlarmRootSettings,
+  WakeAlarmSettings,
+} from './somneoServiceDataTypes';
 
 export class SomneoService {
 
@@ -39,10 +48,14 @@ export class SomneoService {
     return this.getData<SunsetProgramSettings>(SomneoConstants.URI_SUNSET_ENDPOINT, SomneoConstants.TYPE_SUNSET_PROGRAM_SETTINGS);
   }
 
+  async getWakeAlarmSettings(): Promise<WakeAlarmSettings> {
+    return this.getData<WakeAlarmSettings>(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
   async turnOffAudioDevice(): Promise<void> {
 
     const data: AudioDeviceSettings = { onoff: false };
-    this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
+    return this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
   }
 
   async turnOnAudioDevice(source: string, channel: string): Promise<void> {
@@ -55,7 +68,7 @@ export class SomneoService {
       snddv: SomneoConstants.SOUND_SOURCE_FM_RADIO, sndch: channel,
     };
 
-    this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
+    return this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
   }
 
   async updateAudioDeviceInput(input: number): Promise<void> {
@@ -67,49 +80,50 @@ export class SomneoService {
       sndch: String(input),
     };
 
-    this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
+    return this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
   }
 
   async updateAudioDeviceVolume (volume: number): Promise<void> {
 
     const data: AudioDeviceSettings = { sdvol: volume };
-    this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
+    return this.putData<AudioDeviceSettings>(SomneoConstants.URI_AUDIO_ENDPOINT, data, SomneoConstants.TYPE_AUDIO_DEVICE_SETTINGS);
   }
 
   async turnOffMainLight(): Promise<void> {
 
     const data: LightSettings = { onoff: false, tempy: false };
-    this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
+    return this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
   }
 
   async turnOnMainLight(): Promise<void> {
 
     const data: LightSettings = { onoff: true, tempy: false };
-    this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
+    return this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
   }
 
   async updateMainLightBrightness(brightness: number): Promise<void> {
 
     const data: LightSettings = { ltlvl: SomneoConstants.convertPercentageToPhilipsPercentage(brightness) };
-    this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
+    return this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, data, SomneoConstants.TYPE_LIGHT_SETTINGS);
   }
 
   async turnOffNightLight(): Promise<void> {
 
     const body: LightSettings = { ngtlt: false };
-    this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, body, SomneoConstants.TYPE_LIGHT_SETTINGS);
+    return this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, body, SomneoConstants.TYPE_LIGHT_SETTINGS);
   }
 
   async turnOnNightLight(): Promise<void> {
 
     const body: LightSettings = { ngtlt: true };
-    this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, body, SomneoConstants.TYPE_LIGHT_SETTINGS);
+    return this.putData<LightSettings>(SomneoConstants.URI_LIGHTS_ENDPOINT, body, SomneoConstants.TYPE_LIGHT_SETTINGS);
   }
 
   async turnOffRelaxBreatheProgram(): Promise<void> {
 
     const data: RelaxBreatheProgramSettings = { onoff: false };
-    this.putData<RelaxBreatheProgramSettings>(SomneoConstants.URI_RELAX_BREATHE, data, SomneoConstants.TYPE_RELAX_BREATHE_PROGRAM_SETTINGS);
+    return this.putData<RelaxBreatheProgramSettings>(SomneoConstants.URI_RELAX_BREATHE, data,
+      SomneoConstants.TYPE_RELAX_BREATHE_PROGRAM_SETTINGS);
   }
 
   async turnOnRelaxBreatheProgram(relaxBreathePrefs: RelaxeBreatheProgramPreferences): Promise<void> {
@@ -128,13 +142,13 @@ export class SomneoService {
       sndlv: relaxBreathePrefs.Volume,
     };
 
-    this.putData(SomneoConstants.URI_RELAX_BREATHE, data, SomneoConstants.TYPE_RELAX_BREATHE_PROGRAM_SETTINGS);
+    return this.putData(SomneoConstants.URI_RELAX_BREATHE, data, SomneoConstants.TYPE_RELAX_BREATHE_PROGRAM_SETTINGS);
   }
 
   async turnOffSunsetProgram(): Promise<void> {
 
     const data: SunsetProgramSettings = { onoff: false };
-    this.putData(SomneoConstants.URI_SUNSET_ENDPOINT, data, SomneoConstants.TYPE_SUNSET_PROGRAM_SETTINGS);
+    return this.putData(SomneoConstants.URI_SUNSET_ENDPOINT, data, SomneoConstants.TYPE_SUNSET_PROGRAM_SETTINGS);
   }
 
   async turnOnSunsetProgram(sunsetPrefs: SunsetProgramPreferences): Promise<void> {
@@ -155,7 +169,35 @@ export class SomneoService {
       sndlv: sunsetPrefs.Volume,
     };
 
-    this.putData(SomneoConstants.URI_SUNSET_ENDPOINT, data, SomneoConstants.TYPE_SUNSET_PROGRAM_SETTINGS);
+    return this.putData(SomneoConstants.URI_SUNSET_ENDPOINT, data, SomneoConstants.TYPE_SUNSET_PROGRAM_SETTINGS);
+  }
+
+  async updateWakeAlarmEnabled(profileNumber: number, isEnabled: boolean): Promise<void> {
+
+    const data: WakeAlarmSettings = { prfen: isEnabled, prfnr: profileNumber };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async setWakeAlarmSettings(wakeAlarmSettings: WakeAlarmSettings): Promise<void> {
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, wakeAlarmSettings, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async setWakeAlarmSnoozeDuration(minutes: number): Promise<void> {
+
+    const data: WakeAlarmRootSettings = { snztm: minutes };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ROOT_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_ROOT_SETTINGS);
+  }
+
+  async snoozeWakeAlarm(): Promise<void> {
+
+    const data: WakeAlarmControl = { tapsz: true };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_CONTROL_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_CONTROL);
+  }
+
+  async dismissWakeAlarm(): Promise<void> {
+
+    const data: WakeAlarmControl = { disms: true };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_CONTROL_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_CONTROL);
   }
 
   private async getData<T>(uri: string, type: string): Promise<T> {
@@ -185,4 +227,3 @@ export class SomneoService {
       .then(res => res.data), SomneoConstants.DEFAULT_RETRY_OPTIONS);
   }
 }
-

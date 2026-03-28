@@ -1,0 +1,619 @@
+{
+  "info": {
+    "_postman_id": "8a928c8a-6484-4d5d-b7ea-5b6bc9f68910",
+    "name": "Philips Somneo LAN API",
+    "description": "Reverse-engineered Philips Somneo LAN API collection for the live unit at 192.168.12.219.\n\nImportant:\n- The Somneo uses a self-signed TLS certificate. In Postman, disable SSL certificate verification before using this collection.\n- The safest write flow for wake alarms is GET /wualm/prfwu, modify only the fields you need, then PUT the full profile back.\n- GET endpoints in this collection are confirmed live on the device.\n- PUT /wualm/prfwu, PUT /wualm/alctr, and PUT /wualm with snztm were also live-tested.\n- Be careful with /wualm/aalms and /wualm/aenvs writes. Those endpoints appear writable, but they behaved unexpectedly on live round-trips and are not included as write requests here.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "protocol",
+      "value": "https"
+    },
+    {
+      "key": "host",
+      "value": "192.168.12.219"
+    },
+    {
+      "key": "profileNumber",
+      "value": "5"
+    },
+    {
+      "key": "wakeHour",
+      "value": "7"
+    },
+    {
+      "key": "wakeMinute",
+      "value": "0"
+    },
+    {
+      "key": "curve",
+      "value": "20"
+    },
+    {
+      "key": "duration",
+      "value": "30"
+    },
+    {
+      "key": "ctype",
+      "value": "0"
+    },
+    {
+      "key": "soundDevice",
+      "value": "wus"
+    },
+    {
+      "key": "soundChannel",
+      "value": "1"
+    },
+    {
+      "key": "soundLevel",
+      "value": "12"
+    },
+    {
+      "key": "soundSession",
+      "value": "30000"
+    },
+    {
+      "key": "powerWakeEnabled",
+      "value": "0"
+    },
+    {
+      "key": "powerWakeHour",
+      "value": "8"
+    },
+    {
+      "key": "powerWakeMinute",
+      "value": "17"
+    },
+    {
+      "key": "snoozeMinutes",
+      "value": "9"
+    },
+    {
+      "key": "lightLevel",
+      "value": "12"
+    },
+    {
+      "key": "audioVolume",
+      "value": "12"
+    },
+    {
+      "key": "fmChannel",
+      "value": "1"
+    }
+  ],
+  "item": [
+    {
+      "name": "Wake And Alarm",
+      "description": "Native wake-alarm endpoints discovered from the Philips app and verified live on the Somneo.",
+      "item": [
+        {
+          "name": "GET Wake Alarm Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm",
+            "description": "Root wake-alarm summary. Live response fields included snztm, aenvs, alctr, aalms, prfnr, and prfwu."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Wake Alarm Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/prfwu",
+            "description": "Current wake profile. Live response fields included prfnr, prfen, prfvs, almhr, almmn, curve, durat, ctype, snddv, sndch, sndlv, sndss, pwrsz, pszhr, and pszmn."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Arm Wake Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prfnr\": {{profileNumber}},\n  \"prfen\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/prfwu",
+            "description": "Minimal live-tested arm request."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Disarm Wake Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prfnr\": {{profileNumber}},\n  \"prfen\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/prfwu",
+            "description": "Minimal live-tested disarm request."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Set Wake Time And Arm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prfnr\": {{profileNumber}},\n  \"prfen\": true,\n  \"prfvs\": true,\n  \"pname\": \"\",\n  \"ayear\": 0,\n  \"amnth\": 0,\n  \"alday\": 0,\n  \"daynm\": 0,\n  \"almhr\": {{wakeHour}},\n  \"almmn\": {{wakeMinute}},\n  \"curve\": {{curve}},\n  \"durat\": {{duration}},\n  \"ctype\": {{ctype}},\n  \"snddv\": \"{{soundDevice}}\",\n  \"sndch\": \"{{soundChannel}}\",\n  \"sndlv\": {{soundLevel}},\n  \"sndss\": {{soundSession}},\n  \"pwrsz\": {{powerWakeEnabled}},\n  \"pszhr\": {{powerWakeHour}},\n  \"pszmn\": {{powerWakeMinute}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/prfwu",
+            "description": "Full wake-profile template based on the live profile shape returned by the device. Safer workflow: GET /wualm/prfwu, copy the body, change only the fields you want, then PUT it back."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Wake Alarm Schedule Arrays",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/aalms",
+            "description": "Bulk alarm schedule arrays. Live response included ayear, amnth, alday, daynm, almhr, and almmn. Do not blindly PUT this endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Wake Alarm Enabled States",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/aenvs",
+            "description": "Bulk alarm enabled and visible states. Live response included prfen, prfvs, pwrsv, and utcof. Do not blindly PUT this endpoint."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Wake Alarm Controls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/alctr",
+            "description": "Alarm action/control state. Live response included tapsz and disms."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Set Snooze Duration",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"snztm\": {{snoozeMinutes}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm",
+            "description": "Live-tested snooze duration write."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Alarm Actions",
+      "description": "Active-alarm control requests that were live-tested.",
+      "item": [
+        {
+          "name": "PUT Snooze Active Alarm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tapsz\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/alctr",
+            "description": "Live-tested alarm snooze action."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Dismiss Active Alarm",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"disms\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/alctr",
+            "description": "Live-tested alarm dismiss action."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Clear Alarm Control Flags",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tapsz\": false,\n  \"disms\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/alctr",
+            "description": "Clears the active alarm control flags after testing."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Device Wake Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wusts",
+            "description": "Device status endpoint. Live response fields included wusts, rpair, pwrsz, snztm, brght, dspon, wutim, dutim, and sntim."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Plugin Endpoints",
+      "description": "Endpoints already used by the Homebridge plugin.",
+      "item": [
+        {
+          "name": "GET Audio Playback State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wuply",
+            "description": "Live response fields included onoff, sdvol, tempy, sndss, snddv, and sndch."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Audio On AUX",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"onoff\": true,\n  \"snddv\": \"aux\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wuply",
+            "description": "Turns audio on using the AUX source."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Audio On FM Favorite",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"onoff\": true,\n  \"snddv\": \"fmr\",\n  \"sndch\": \"{{fmChannel}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wuply",
+            "description": "Turns audio on using an FM favorite channel."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Set Audio Volume",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sdvol\": {{audioVolume}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wuply",
+            "description": "Sets wake/audio volume."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Light State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wulgt",
+            "description": "Live response fields included ltlvl, onoff, ctype, tempy, ngtlt, pwmon, and diman."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Light On",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"onoff\": true,\n  \"tempy\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wulgt",
+            "description": "Turns the main light on."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Light Off",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"onoff\": false,\n  \"tempy\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wulgt",
+            "description": "Turns the main light off."
+          },
+          "response": []
+        },
+        {
+          "name": "PUT Set Light Brightness",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ltlvl\": {{lightLevel}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wulgt",
+            "description": "Sets the main light brightness."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Relax Breathe State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wurlx",
+            "description": "Live response fields included durat, onoff, progr, rtype, intny, sndlv, sndss, rlbpm, and pause."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Sensors",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wusrd",
+            "description": "Live response fields included mslux, mstmp, msrhu, avlux, avtmp, and avrhu."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Sunset State",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wudsk",
+            "description": "Live response fields included durat, onoff, curve, ctype, snddv, sndch, sndlv, and sndss."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Diagnostics",
+      "description": "Useful discovery and nearby diagnostic endpoints.",
+      "item": [
+        {
+          "name": "GET Security Port",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/0/security",
+            "description": "Security bootstrap port discovered from the Philips app. Live response included key and nextkey."
+          },
+          "response": []
+        },
+        {
+          "name": "GET Unsupported prfwk Slot 01",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{protocol}}://{{host}}/di/v1/products/1/wualm/prfwk/01",
+            "description": "Probe request. On the live device this returned HTTP 422 with {\"error\":\"No such Port\"}."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

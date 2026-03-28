@@ -993,6 +993,35 @@
                       }
                     }
                   }
+                },
+                "wakeAlarm": {
+                  "type": "object",
+                  "properties": {
+                    "isEnabled": {
+                      "title": "Enable Wake Alarm",
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Expose a switch that arms or disarms the current Somneo wake alarm."
+                    },
+                    "showSnoozeSwitch": {
+                      "title": "Show Snooze Alarm Switch",
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Expose a momentary switch that sends the native Somneo snooze action.",
+                      "condition": {
+                        "functionBody": "return model.somneos[arrayIndices[0]].switches.wakeAlarm.isEnabled === true;"
+                      }
+                    },
+                    "showDismissSwitch": {
+                      "title": "Show Dismiss Alarm Switch",
+                      "type": "boolean",
+                      "default": false,
+                      "description": "Expose a momentary switch that sends the native Somneo dismiss action.",
+                      "condition": {
+                        "functionBody": "return model.somneos[arrayIndices[0]].switches.wakeAlarm.isEnabled === true;"
+                      }
+                    }
+                  }
                 }
               }
             },
@@ -1061,6 +1090,43 @@
         "type": "number",
         "placeholder": 30,
         "description": "Interval (in seconds) to check status and update accessories."
+      },
+      "webhookApi": {
+        "type": "object",
+        "properties": {
+          "isEnabled": {
+            "title": "Enable Local Webhook API",
+            "type": "boolean",
+            "default": false,
+            "description": "Expose a simple local HTTP API for Shortcuts and other local automations."
+          },
+          "bindHost": {
+            "title": "Webhook Bind Host",
+            "type": "string",
+            "default": "0.0.0.0",
+            "description": "The host or IP address to bind the local webhook server to. Use 0.0.0.0 to allow calls from other devices on your LAN.",
+            "condition": {
+              "functionBody": "return model.webhookApi.isEnabled === true;"
+            }
+          },
+          "port": {
+            "title": "Webhook Port",
+            "type": "number",
+            "default": 8585,
+            "description": "TCP port for the local webhook API.",
+            "condition": {
+              "functionBody": "return model.webhookApi.isEnabled === true;"
+            }
+          },
+          "token": {
+            "title": "Webhook Token",
+            "type": "string",
+            "description": "Optional shared secret. If set, send it as a Bearer token, X-Somneo-Token header, or token query parameter.",
+            "condition": {
+              "functionBody": "return model.webhookApi.isEnabled === true;"
+            }
+          }
+        }
       }
     }
   },
@@ -1095,6 +1161,9 @@
             "somneos[].switches.sunset.colorScheme",
             "somneos[].switches.sunset.ambientSounds",
             "somneos[].switches.sunset.volume",
+            "somneos[].switches.wakeAlarm.isEnabled",
+            "somneos[].switches.wakeAlarm.showSnoozeSwitch",
+            "somneos[].switches.wakeAlarm.showDismissSwitch",
             "somneos[].switches.relaxBreathe.isEnabled",
             "somneos[].switches.relaxBreathe.breathsPerMin",
             "somneos[].switches.relaxBreathe.duration",
@@ -1113,7 +1182,11 @@
       "expandable": true,
       "expanded": false,
       "items": [
-        "pollingSeconds"
+        "pollingSeconds",
+        "webhookApi.isEnabled",
+        "webhookApi.bindHost",
+        "webhookApi.port",
+        "webhookApi.token"
       ]
     }
   ]

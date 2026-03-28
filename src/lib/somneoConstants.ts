@@ -35,6 +35,9 @@ export class SomneoConstants {
   static readonly DEFAULT_SUNSET_PROGRAM_LIGHT_INTENSITY = 20; // 80%
   static readonly DEFAULT_SUNSET_PROGRAM_VOLUME = 12; // 48%
   static readonly DEFAULT_TEMPERATURE = 0;
+  static readonly DEFAULT_WAKE_ALARM_PROFILE_NUMBER = 5;
+  static readonly DEFAULT_WEBHOOK_API_BIND_HOST = '0.0.0.0';
+  static readonly DEFAULT_WEBHOOK_API_PORT = 8585;
 
   // Strings
   static readonly DEVICE_AUDIO = 'Audio';
@@ -58,16 +61,25 @@ export class SomneoConstants {
   static readonly SUNSET_PROGRAM_SOUND_NONE = '0';
   static readonly SWITCH_RELAX_BREATHE_PROGRAM = 'RelaxBreathe Program';
   static readonly SWITCH_SUNSET_PROGRAM = 'Sunset Program';
+  static readonly SWITCH_WAKE_ALARM = 'Wake Alarm';
+  static readonly SWITCH_WAKE_ALARM_DISMISS = 'Dismiss Alarm';
+  static readonly SWITCH_WAKE_ALARM_SNOOZE = 'Snooze Alarm';
   static readonly TYPE_AUDIO_DEVICE_SETTINGS = 'AudioDeviceSettings';
   static readonly TYPE_LIGHT_SETTINGS = 'LightSettings';
   static readonly TYPE_RELAX_BREATHE_PROGRAM_SETTINGS = 'RelaxBreatheProgramSettings';
   static readonly TYPE_SENSOR_READINGS = 'SensorReadings';
   static readonly TYPE_SUNSET_PROGRAM_SETTINGS = 'SunsetProgramSettings';
+  static readonly TYPE_WAKE_ALARM_CONTROL = 'WakeAlarmControl';
+  static readonly TYPE_WAKE_ALARM_ROOT_SETTINGS = 'WakeAlarmRootSettings';
+  static readonly TYPE_WAKE_ALARM_SETTINGS = 'WakeAlarmSettings';
   static readonly URI_AUDIO_ENDPOINT = '/wuply';
   static readonly URI_LIGHTS_ENDPOINT = '/wulgt';
   static readonly URI_RELAX_BREATHE = '/wurlx';
   static readonly URI_SENSORS_ENDPOINT = '/wusrd';
   static readonly URI_SUNSET_ENDPOINT = '/wudsk';
+  static readonly URI_WAKE_ALARM_CONTROL_ENDPOINT = '/wualm/alctr';
+  static readonly URI_WAKE_ALARM_ROOT_ENDPOINT = '/wualm';
+  static readonly URI_WAKE_ALARM_ENDPOINT = '/wualm/prfwu';
 
   static readonly DEFAULT_AUDIO_PREFS: AudioPreferences = {
     FavoriteChannel: SomneoConstants.DEFAULT_AUDIO_CHANNEL,

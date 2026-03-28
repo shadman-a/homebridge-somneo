@@ -28,35 +28,37 @@ export abstract class SomneoBinaryAccessory extends SomneoAccessory {
       return;
     }
 
-    if (boolValue) {
-      this.turnOffConflictingAccessories();
-    }
+    try {
+      if (boolValue) {
+        await this.turnOffConflictingAccessories();
+      }
 
-    this.modifySomneoServiceState(boolValue).then(() => {
+      await this.modifySomneoServiceState(boolValue);
       this.isOn = boolValue;
       this.platform.log.info(`UI Set -> accessory=${this.name} on=${this.isOn}`);
-    }).catch(err => {
+    } catch (err) {
       this.platform.log.error(`Error -> Setting accessory=${this.name} on=${boolValue} err=${err}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    });
+    }
   }
 
-  turnOff(): Promise<void> {
+  async turnOff(): Promise<void> {
 
-    if (this.isOn) {
-      this.modifySomneoServiceState(false).then(() => {
-        this.isOn = false;
-        this.platform.log.info(`UI Set -> accessory=${this.name} on=${this.isOn}`);
-        this.getBinaryService()
-          .getCharacteristic(this.getBinaryCharacteristic())
-          .updateValue(this.isOn);
-      }).catch(err => {
-        this.platform.log.error(`Error -> Turning off accessory=${this.name} err=${err}`);
-        throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-      });
+    if (!this.isOn) {
+      return;
     }
 
-    return Promise.resolve();
+    try {
+      await this.modifySomneoServiceState(false);
+      this.isOn = false;
+      this.platform.log.info(`UI Set -> accessory=${this.name} on=${this.isOn}`);
+      this.getBinaryService()
+        .getCharacteristic(this.getBinaryCharacteristic())
+        .updateValue(this.isOn);
+    } catch (err) {
+      this.platform.log.error(`Error -> Turning off accessory=${this.name} err=${err}`);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

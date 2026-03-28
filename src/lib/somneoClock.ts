@@ -99,6 +99,31 @@ export class SomneoClock {
       requestedAccessories.push(relaxBreatheSwitch);
     }
 
+    requestedAccessories.push(...this.buildRequestedWakeAlarmAccessories(config.switches));
+
+    return requestedAccessories;
+  }
+
+  private static buildRequestedWakeAlarmAccessories(switchesConfig: SwitchesConfig): RequestedAccessory[] {
+
+    if (switchesConfig.wakeAlarm === undefined) {
+      return [];
+    }
+
+    const requestedAccessories: RequestedAccessory[] = [];
+
+    if (this.getBooleanValue(switchesConfig.wakeAlarm.isEnabled, false)) {
+      requestedAccessories.push(RequestedAccessory.SWITCH_WAKE_ALARM);
+    }
+
+    if (this.getBooleanValue(switchesConfig.wakeAlarm.showSnoozeSwitch, false)) {
+      requestedAccessories.push(RequestedAccessory.SWITCH_WAKE_ALARM_SNOOZE);
+    }
+
+    if (this.getBooleanValue(switchesConfig.wakeAlarm.showDismissSwitch, false)) {
+      requestedAccessories.push(RequestedAccessory.SWITCH_WAKE_ALARM_DISMISS);
+    }
+
     return requestedAccessories;
   }
 
@@ -348,10 +373,10 @@ export class SomneoClock {
     return SomneoConstants.convertPercentageToPhilipsPercentage(configPercentageValue);
   }
 
-  private static getBooleanValue(configBooleanValue?: boolean) {
+  private static getBooleanValue(configBooleanValue?: boolean, defaultValue = SomneoConstants.DEFAULT_BOOLEAN_CONFIG_VALUE) {
 
     if (configBooleanValue === undefined) {
-      return SomneoConstants.DEFAULT_BOOLEAN_CONFIG_VALUE;
+      return defaultValue;
     }
 
     return configBooleanValue;

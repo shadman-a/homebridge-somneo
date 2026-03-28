@@ -64,18 +64,20 @@ export class SomneoMainLightAccessory extends SomneoDimmableLightAccessory {
 
   protected turnOffConflictingAccessories(): Promise<void> {
 
+    const requests: Promise<void>[] = [];
+
     if (this.platform.HostNightLightMap.has(this.somneoClock.SomneoService.Host)) {
-      this.platform.HostNightLightMap.get(this.somneoClock.SomneoService.Host).turnOff();
+      requests.push(this.platform.HostNightLightMap.get(this.somneoClock.SomneoService.Host).turnOff());
     }
 
     if (this.platform.HostRelaxBreatheSwitchMap.has(this.somneoClock.SomneoService.Host)) {
-      this.platform.HostRelaxBreatheSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff();
+      requests.push(this.platform.HostRelaxBreatheSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff());
     }
 
     if (this.platform.HostSunsetSwitchMap.has(this.somneoClock.SomneoService.Host)) {
-      this.platform.HostSunsetSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff();
+      requests.push(this.platform.HostSunsetSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff());
     }
 
-    return Promise.resolve();
+    return Promise.all(requests).then(() => undefined);
   }
 }

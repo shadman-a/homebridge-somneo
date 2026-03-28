@@ -8,6 +8,10 @@ import { SomneoNightLightAccessory } from './lib/somneoNightLightAccessory';
 import { SomneoRelaxBreatheSwitchAccessory } from './lib/somneoRelaxBreatheSwitchAccessory';
 import { SomneoSensorAccessory } from './lib/somneoSensorAccessory';
 import { SomneoSunsetSwitchAccessory } from './lib/somneoSunsetSwitchAccessory';
+import { SomneoWakeAlarmDismissSwitchAccessory } from './lib/somneoWakeAlarmDismissSwitchAccessory';
+import { SomneoWakeAlarmSnoozeSwitchAccessory } from './lib/somneoWakeAlarmSnoozeSwitchAccessory';
+import { SomneoWakeAlarmSwitchAccessory } from './lib/somneoWakeAlarmSwitchAccessory';
+import { SomneoWebhookServer } from './lib/somneoWebhookServer';
 import { UserSettings } from './lib/userSettings';
 import { PLUGIN_NAME } from './settings';
 
@@ -24,6 +28,7 @@ export class SomneoPlatform implements StaticPlatformPlugin {
 
   private SomneoAccessories : SomneoAccessory[] = [];
   private readonly UserSettings: UserSettings;
+  private readonly webhookServer?: SomneoWebhookServer;
 
   constructor(
     public readonly log: Logger,
@@ -38,6 +43,12 @@ export class SomneoPlatform implements StaticPlatformPlugin {
     }
 
     this.buildAccessories();
+
+    if (this.UserSettings.WebhookApiSettings.isEnabled) {
+      this.webhookServer = new SomneoWebhookServer(this.UserSettings.SomneoClocks, this.log, this.UserSettings.WebhookApiSettings);
+      this.webhookServer.start();
+      this.api.on('shutdown', () => this.webhookServer?.stop());
+    }
 
     this.log.debug(`Initialized -> platform=${this.UserSettings.PlatformName}`);
   }
@@ -94,6 +105,30 @@ export class SomneoPlatform implements StaticPlatformPlugin {
 
         this.HostSunsetSwitchMap.set(somneoClock.SomneoService.Host, sunsetSwitch);
         this.SomneoAccessories.push(sunsetSwitch);
+      }
+
+      if (somneoClock.RequestedAccessories.includes(RequestedAccessory.SWITCH_WAKE_ALARM)) {
+        const wakeAlarmSwitch = new SomneoWakeAlarmSwitchAccessory(this, somneoClock);
+
+        this.log.debug(`Included -> accessory=${wakeAlarmSwitch.name}`);
+
+        this.SomneoAccessories.push(wakeAlarmSwitch);
+      }
+
+      if (somneoClock.RequestedAccessories.includes(RequestedAccessory.SWITCH_WAKE_ALARM_SNOOZE)) {
+        const snoozeSwitch = new SomneoWakeAlarmSnoozeSwitchAccessory(this, somneoClock);
+
+        this.log.debug(`Included -> accessory=${snoozeSwitch.name}`);
+
+        this.SomneoAccessories.push(snoozeSwitch);
+      }
+
+      if (somneoClock.RequestedAccessories.includes(RequestedAccessory.SWITCH_WAKE_ALARM_DISMISS)) {
+        const dismissSwitch = new SomneoWakeAlarmDismissSwitchAccessory(this, somneoClock);
+
+        this.log.debug(`Included -> accessory=${dismissSwitch.name}`);
+
+        this.SomneoAccessories.push(dismissSwitch);
       }
 
       if (somneoClock.RequestedAccessories.includes(RequestedAccessory.AUDIO)) {

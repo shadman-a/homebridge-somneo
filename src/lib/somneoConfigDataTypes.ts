@@ -7,6 +7,20 @@ export interface SomneoConfig {
   audio?: AudioConfig;
 }
 
+export interface WebhookApiConfig {
+  isEnabled?: boolean;
+  bindHost?: string;
+  port?: number;
+  token?: string;
+}
+
+export interface WebhookApiSettings {
+  isEnabled: boolean;
+  bindHost: string;
+  port: number;
+  token?: string;
+}
+
 export interface SensorsConfig {
   humidity?: HumidityOrLuxOrTemperatureOrMainLightOrNightLight;
   lux?: HumidityOrLuxOrTemperatureOrMainLightOrNightLight;
@@ -21,6 +35,7 @@ export interface LightsConfig {
 export interface SwitchesConfig {
   relaxBreathe?: RelaxBreatheConfig;
   sunset?: SunsetConfig;
+  wakeAlarm?: WakeAlarmConfig;
 }
 
 export interface HumidityOrLuxOrTemperatureOrMainLightOrNightLight {
@@ -43,6 +58,12 @@ export interface RelaxBreatheConfig {
   guidanceType?: number;
   lightIntensity?: number;
   volume?: number;
+}
+
+export interface WakeAlarmConfig {
+  isEnabled?: boolean;
+  showSnoozeSwitch?: boolean;
+  showDismissSwitch?: boolean;
 }
 
 export interface AudioConfig {

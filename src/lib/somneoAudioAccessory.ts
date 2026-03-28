@@ -97,13 +97,14 @@ export class SomneoAudioAccessory {
     // If value is 0 it's a raise, if it's 1 it's a lower
     const newVolume = this.getNewVolume(value === 0);
 
-    this.somneoClock.SomneoService.updateAudioDeviceVolume(newVolume).then(() => {
+    try {
+      await this.somneoClock.SomneoService.updateAudioDeviceVolume(newVolume);
       this.volume = newVolume;
       this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} volume=${this.volume}`);
-    }).catch(err => {
+    } catch (err) {
       this.platform.log.error(`Error -> Setting accessory=${this.Accessory.displayName} volume=${newVolume} err=${err}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    });
+    }
   }
 
   async getActive(): Promise<CharacteristicValue> {
@@ -131,13 +132,13 @@ export class SomneoAudioAccessory {
       return;
     }
 
-    if (boolValue) {
-      this.turnOffConflictingAccessories();
-    }
+    try {
+      if (boolValue) {
+        await this.turnOffConflictingAccessories();
+      }
 
-    return (boolValue ? this.somneoClock.SomneoService.turnOnAudioDevice(this.source!, this.channel!) :
-      this.somneoClock.SomneoService.turnOffAudioDevice()
-    ).then(() => {
+      await (boolValue ? this.somneoClock.SomneoService.turnOnAudioDevice(this.source!, this.channel!) :
+        this.somneoClock.SomneoService.turnOffAudioDevice());
       this.isActive = boolValue;
       this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} active=${this.isActive}`);
 
@@ -145,10 +146,10 @@ export class SomneoAudioAccessory {
         this.updateActiveInput();
         this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} active=${this.activeInput}`);
       }
-    }).catch(err => {
+    } catch (err) {
       this.platform.log.error(`Error -> Setting accessory=${this.Accessory.displayName} active=${boolValue} err=${err}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    });
+    }
   }
 
   async getActiveIdentifier(): Promise<CharacteristicValue> {
@@ -172,46 +173,50 @@ export class SomneoAudioAccessory {
       return;
     }
 
-    this.somneoClock.SomneoService.updateAudioDeviceInput(numValue).then(() => {
+    try {
+      await this.somneoClock.SomneoService.updateAudioDeviceInput(numValue);
       this.activeInput = numValue;
       this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} activeIdentifier=${this.activeInput}`);
 
       this.updateChannelAndSource();
-    }).catch(err => {
+    } catch (err) {
       this.platform.log.error(`Error -> Setting accessory=${this.Accessory.displayName} activeIdentifier=${numValue} err=${err}`);
       throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-    });
+    }
   }
 
-  turnOff(): Promise<void> {
+  async turnOff(): Promise<void> {
 
-    if (this.isActive) {
-      this.somneoClock.SomneoService.turnOffAudioDevice().then(() => {
-        this.isActive = false;
-        this.source = SomneoConstants.SOUND_SOURCE_OFF;
-        this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} active=${this.isActive}`);
-        this.televisionService.getCharacteristic(this.platform.Characteristic.Active)
-          .updateValue(this.isActive);
-      }).catch(err => {
-        this.platform.log.error(`Error -> Turning off accessory=${this.Accessory.displayName} err=${err}`);
-        throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
-      });
+    if (!this.isActive) {
+      return;
     }
 
-    return Promise.resolve();
+    try {
+      await this.somneoClock.SomneoService.turnOffAudioDevice();
+      this.isActive = false;
+      this.source = SomneoConstants.SOUND_SOURCE_OFF;
+      this.platform.log.info(`UI Set -> accessory=${this.Accessory.displayName} active=${this.isActive}`);
+      this.televisionService.getCharacteristic(this.platform.Characteristic.Active)
+        .updateValue(this.isActive);
+    } catch (err) {
+      this.platform.log.error(`Error -> Turning off accessory=${this.Accessory.displayName} err=${err}`);
+      throw new this.platform.api.hap.HapStatusError(this.platform.api.hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE);
+    }
   }
 
   private turnOffConflictingAccessories(): Promise<void> {
 
+    const requests: Promise<void>[] = [];
+
     if (this.platform.HostRelaxBreatheSwitchMap.has(this.somneoClock.SomneoService.Host)) {
-      this.platform.HostRelaxBreatheSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff();
+      requests.push(this.platform.HostRelaxBreatheSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff());
     }
 
     if (this.platform.HostSunsetSwitchMap.has(this.somneoClock.SomneoService.Host)) {
-      this.platform.HostSunsetSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff();
+      requests.push(this.platform.HostSunsetSwitchMap.get(this.somneoClock.SomneoService.Host).turnOff());
     }
 
-    return Promise.resolve();
+    return Promise.all(requests).then(() => undefined);
   }
 
   private buildInputServices() {

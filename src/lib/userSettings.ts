@@ -1,7 +1,7 @@
 import { Logger, PlatformConfig } from 'homebridge';
 import { SomneoPlatform } from '../somneoPlatform';
 import { SomneoClock } from './somneoClock';
-import { SomneoConfig } from './somneoConfigDataTypes';
+import { SomneoConfig, WebhookApiConfig, WebhookApiSettings } from './somneoConfigDataTypes';
 import { SomneoConstants } from './somneoConstants';
 export class UserSettings {
 
@@ -9,6 +9,7 @@ export class UserSettings {
     public PlatformName: string,
     public SomneoClocks: SomneoClock[],
     public PollingMilliSeconds: number,
+    public WebhookApiSettings: WebhookApiSettings,
   ) { }
 
   static create(platform: SomneoPlatform): UserSettings {
@@ -17,7 +18,8 @@ export class UserSettings {
     const platformName = UserSettings.buildPlatformName(config);
     const somneoClocks = UserSettings.buildSomneoClocks(platform.log, config);
     const pollingMilliseconds = UserSettings.buildPollingMilliSeconds(config);
-    return new UserSettings(platformName, somneoClocks, pollingMilliseconds);
+    const webhookApiSettings = UserSettings.buildWebhookApiSettings(config);
+    return new UserSettings(platformName, somneoClocks, pollingMilliseconds, webhookApiSettings);
   }
 
   private static buildPollingMilliSeconds(config: PlatformConfig): number {
@@ -43,5 +45,31 @@ export class UserSettings {
 
     // If the user has not specified a platform name, default to Homebridge Somneo
     return config.name ?? SomneoConstants.DEFAULT_PLATFORM_NAME;
+  }
+
+  private static buildWebhookApiSettings(config: PlatformConfig): WebhookApiSettings {
+
+    const webhookApiConfig = (config as PlatformConfig & { webhookApi?: WebhookApiConfig }).webhookApi;
+
+    if (webhookApiConfig === undefined) {
+      return {
+        isEnabled: false,
+        bindHost: SomneoConstants.DEFAULT_WEBHOOK_API_BIND_HOST,
+        port: SomneoConstants.DEFAULT_WEBHOOK_API_PORT,
+      };
+    }
+
+    const port = webhookApiConfig.port;
+    const sanitizedPort = (port !== undefined && Number.isInteger(port) && port > 0 && port <= 65535)
+      ? port
+      : SomneoConstants.DEFAULT_WEBHOOK_API_PORT;
+    const token = webhookApiConfig.token?.trim();
+
+    return {
+      isEnabled: webhookApiConfig.isEnabled === true,
+      bindHost: webhookApiConfig.bindHost?.trim() || SomneoConstants.DEFAULT_WEBHOOK_API_BIND_HOST,
+      port: sanitizedPort,
+      token: token === '' ? undefined : token,
+    };
   }
 }

@@ -53,6 +53,18 @@ Before installing this plugin, you should install Homebridge using the [official
 | **name** | *Yes* | string | Set the platform name for display in the Homebridge logs. | `Homebridge Somneo` |
 | **somneos** | *Yes* | object[] | An array of configurations for Somneo clocks | N/A |
 | **pollingSeconds**| No | number | Time in seconds for how often to ping the clock. | `30` (30000 milliseconds) |
+| **webhookApi**| No | object | Optional local HTTP API for Shortcuts and other LAN automations. | Disabled |
+
+#### WebhookApi Schema
+
+Use this when you want iPhone Shortcuts to control alarms. The Somneo itself uses self-signed HTTPS, so iPhone Shortcuts cannot call it directly. This local HTTP API runs on the Homebridge machine and proxies simple alarm requests to the native Somneo wake endpoints.
+
+| Field | Required | Data Type | Description                   | Default Value |
+| ------| :------: | :-------: | ----------------------------- | :-----------: |
+| **isEnabled** | No | boolean | Enables the local webhook API. | `false` |
+| **bindHost** | No | string | Host/IP address to bind the local API to. Use `0.0.0.0` to allow requests from your iPhone on the same LAN. | `0.0.0.0` |
+| **port** | No | number | TCP port for the local API server. | `8585` |
+| **token** | No | string | Optional shared secret. If set, send it as a Bearer token, `X-Somneo-Token` header, or `token` query parameter. | Unset |
 
 #### Somneo Schema
 
@@ -116,6 +128,7 @@ Before installing this plugin, you should install Homebridge using the [official
 | ------| :------: | :-------: | ----------------------------- | :-----------: |
 | **relaxBreathe** | *Yes* | object | Settings for the RelaxBreathe Program switch. | N/A |
 | **sunset** | *Yes* | object | Settings for the Sunset Program switch. | N/A |
+| **wakeAlarm** | No | object | Settings for native wake alarm controls. | Disabled |
 
 ###### RelaxBreathe Schema
 
@@ -138,6 +151,16 @@ Before installing this plugin, you should install Homebridge using the [official
 | **colorScheme** | No | string | What color pattern should play during the Sunset Program.<br /><br />Possible values:<ul><li>Sunny Day = `'0'`</li><li>Island Red = `'1'`</li><li>Nordic White = `'2'`</li><li>Carribean Red = `'3'`</li></ul> | `'0'` (Sunny Day) |
 | **ambientSounds** | No | string | What sounds should play during the Sunset Program.<br /><br />Possible values:<ul><li>Soft Rain = `'1'`</li><li>Ocean Waves = `'2'`</li><li>Under Water = `'3'`</li><li>Summer Lake = `'4'`</li><li>No Sound = `'0'`</li></ul> | `'1'` (Soft Rain) |
 | **volume** | No | number | How loud the Sunset Program should be at the start. The value is a percentage that will be converted to a number between `1 and 25`. | `48` (48% converted to the the Philips API value 12) |
+
+###### WakeAlarm Schema
+
+The Wake Alarm controls the currently configured Somneo wake profile. Use the Philips app to set the wake time, days, sunrise ramp, and sound. HomeKit can then arm/disarm that profile and optionally expose native snooze and dismiss actions.
+
+| Field | Required | Data Type | Description                   | Default Value |
+| ------| :------: | :-------: | ----------------------------- | :-----------: |
+| **isEnabled** | No | boolean | Determines whether or not to expose the main Wake Alarm switch. | `false` |
+| **showSnoozeSwitch** | No | boolean | Exposes a momentary `Snooze Alarm` switch that sends the native snooze action. Useful in Favorites or scenes while an alarm is active. | `false` |
+| **showDismissSwitch** | No | boolean | Exposes a momentary `Dismiss Alarm` switch that sends the native dismiss action. Useful in Favorites or scenes while an alarm is active. | `false` |
 
 ##### Audio Schema
 
@@ -225,6 +248,11 @@ This configuration will expose all items with default values, but is very verbos
           "colorScheme": 0,
           "ambientSounds": "1",
           "volume": 48
+        },
+        "wakeAlarm": {
+          "isEnabled": true,
+          "showSnoozeSwitch": false,
+          "showDismissSwitch": false
         }
       },
       "audio": {
@@ -234,8 +262,101 @@ This configuration will expose all items with default values, but is very verbos
     }
   ],
   "pollingSeconds": 30,
+  "webhookApi": {
+    "isEnabled": true,
+    "bindHost": "0.0.0.0",
+    "port": 8585,
+    "token": "replace-me"
+  },
   "platform": "HomebridgeSomneo"
 }
+```
+
+## Local Shortcut API
+
+Base URL:
+
+```text
+http://homebridge.local:8585/somneo/v1
+```
+
+If only one Somneo clock is configured, the `clock` field is optional. If multiple clocks are configured, set `clock` to the configured clock name or host.
+
+If `webhookApi.token` is configured, include it in one of these ways:
+
+- Query string: `?token=replace-me`
+- Header: `Authorization: Bearer replace-me`
+- Header: `X-Somneo-Token: replace-me`
+
+### Endpoints
+
+| Method | Path | Purpose |
+| ------ | ---- | ------- |
+| `GET` | `/somneo/v1/health` | Health check for the local API server. |
+| `GET` | `/somneo/v1/clocks` | Lists configured Somneo clocks. |
+| `GET` | `/somneo/v1/alarm` | Reads the current Somneo wake alarm. |
+| `GET` | `/somneo/v1/alarm/set?time=07:00` | Shortcut-friendly create/update endpoint using query parameters. |
+| `POST` / `PUT` | `/somneo/v1/alarm` | Create or update the current Somneo wake alarm with JSON. |
+| `POST` / `GET` | `/somneo/v1/alarm/enable` | Arm the current wake alarm profile. |
+| `POST` / `GET` | `/somneo/v1/alarm/disable` | Disarm the current wake alarm profile. |
+| `DELETE` | `/somneo/v1/alarm` | Delete alias. This disables the current wake alarm profile and keeps the saved settings. |
+| `POST` / `GET` | `/somneo/v1/alarm/delete` | Same as `DELETE /somneo/v1/alarm`. |
+| `POST` / `GET` | `/somneo/v1/alarm/snooze` | Sends the native Somneo snooze action. |
+| `POST` / `GET` | `/somneo/v1/alarm/dismiss` | Sends the native Somneo dismiss action. |
+| `POST` / `GET` | `/somneo/v1/alarm/snooze-duration` | Sets the global snooze duration in minutes. |
+
+### Simple Alarm Payload
+
+`POST /somneo/v1/alarm`
+
+```json
+{
+  "clock": "Bedroom Somneo",
+  "time": "07:00",
+  "enabled": true,
+  "sunriseMinutes": 30,
+  "lightTheme": 0,
+  "soundSource": "wus",
+  "sound": "1",
+  "volume": 12,
+  "powerWake": false,
+  "powerWakeTime": "08:17"
+}
+```
+
+Supported fields:
+
+- `clock`: optional when only one Somneo is configured
+- `time`: `HH:MM` in 24-hour format
+- `enabled`: `true` or `false`
+- `sunriseMinutes`: Somneo sunrise ramp duration
+- `lightTheme`: native Somneo light theme value
+- `soundSource`: native sound source value such as `wus`
+- `sound`: native sound/channel value such as `1`
+- `volume`: native Somneo sound level
+- `powerWake`: `true` or `false`
+- `powerWakeTime`: `HH:MM` in 24-hour format
+
+If you set `time` and omit `enabled`, the plugin will automatically arm the alarm.
+
+### Shortcut Examples
+
+Create or update an alarm with a plain URL:
+
+```text
+http://homebridge.local:8585/somneo/v1/alarm/set?time=07:00&token=replace-me
+```
+
+Disable the current alarm:
+
+```text
+http://homebridge.local:8585/somneo/v1/alarm/delete?token=replace-me
+```
+
+Read the current alarm:
+
+```text
+http://homebridge.local:8585/somneo/v1/alarm?token=replace-me
 ```
 
 ## Future Plans
