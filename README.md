@@ -1,4 +1,4 @@
-# homebridge-somneo
+# homebridge-sleep-wake
 
 ## What This Plugin Is
 This is a plugin for [homebridge](https://github.com/homebridge/homebridge). It allows for management of the [Philips Somneo HF3670/60](https://www.usa.philips.com/c-p/HF3670_60/smartsleep-connected-sleep-and-wake-up-light). Additionally, it provides sensor data from the clock.
@@ -35,12 +35,12 @@ Before installing this plugin, you should install Homebridge using the [official
 
 ### Install via Homebridge Config UI X
 
-1. Search for `Homebridge Somneo` on the Plugins tab of [Config UI X](https://www.npmjs.com/package/homebridge-config-ui-x).
-2. Install the `Homebridge Somneo` plugin and use the form to enter your configuration.
+1. Search for `Homebridge Sleep Wake` on the Plugins tab of [Config UI X](https://www.npmjs.com/package/homebridge-config-ui-x).
+2. Install the `Homebridge Sleep Wake` plugin and use the form to enter your configuration.
 
 ### Manual Installation
 
-1. Install this plugin using: `sudo npm install -g homebridge-somneo --unsafe-perm`.
+1. Install this plugin using: `sudo npm install -g homebridge-sleep-wake --unsafe-perm`.
 2. Edit `config.json` manually to add your information. See below for instructions on that.
 
 ## Manual Configuration
@@ -50,7 +50,7 @@ Before installing this plugin, you should install Homebridge using the [official
 | Field | Required | Data Type | Description                   | Default Value |
 | ------| :------: | :--------: | ----------------------------- | :----------: |
 | **platform** | *Yes* | string | Must always be set to `HomebridgeSomneo`.| N/A |
-| **name** | *Yes* | string | Set the platform name for display in the Homebridge logs. | `Homebridge Somneo` |
+| **name** | *Yes* | string | Set the platform name for display in the Homebridge logs. | `Homebridge Sleep Wake` |
 | **somneos** | *Yes* | object[] | An array of configurations for Somneo clocks | N/A |
 | **pollingSeconds**| No | number | Time in seconds for how often to ping the clock. | `30` (30000 milliseconds) |
 | **webhookApi**| No | object | Optional local HTTP API for Shortcuts and other LAN automations. | Disabled |

@@ -1,7 +1,7 @@
 {
   "pluginAlias": "HomebridgeSomneo",
   "pluginType": "platform",
-  "headerDisplay": "Report issues at https://github.com/zackwag/homebridge-somneo/issues",
+  "headerDisplay": "Report issues at https://github.com/shadman-a/homebridge-somneo/issues",
   "singular": true,
   "schema": {
     "type": "object",
@@ -10,7 +10,7 @@
         "title": "Platform Name",
         "type": "string",
         "required": true,
-        "default": "Homebridge Somneo",
+        "default": "Homebridge Sleep Wake",
         "description": "Name for plugin that will appear in Homebridge Logs."
       },
       "somneos": {

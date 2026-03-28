@@ -1,15 +1,15 @@
 {
-  "displayName": "Homebridge Somneo",
-  "name": "homebridge-somneo",
-  "version": "1.7.1",
-  "description": "A Homebridge plugin to control Philips Somneo clocks.",
+  "displayName": "Homebridge Sleep Wake",
+  "name": "homebridge-sleep-wake",
+  "version": "1.7.2",
+  "description": "A Homebridge plugin to control Philips Sleep and Wake clocks, including Somneo wake alarms.",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "git://github.com/zackwag/homebridge-somneo.git"
+    "url": "git://github.com/shadman-a/homebridge-somneo.git"
   },
   "bugs": {
-    "url": "https://github.com/zackwag/homebridge-somneo/issues"
+    "url": "https://github.com/shadman-a/homebridge-somneo/issues"
   },
   "engines": {
     "node": ">=10.17.0",
