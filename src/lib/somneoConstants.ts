@@ -35,6 +35,8 @@ export class SomneoConstants {
   static readonly DEFAULT_SUNSET_PROGRAM_LIGHT_INTENSITY = 20; // 80%
   static readonly DEFAULT_SUNSET_PROGRAM_VOLUME = 12; // 48%
   static readonly DEFAULT_TEMPERATURE = 0;
+  // Live Somneo reads report 254 for an alarm that repeats every day.
+  static readonly DEFAULT_WAKE_ALARM_DAILY_DAY_MASK = 254;
   static readonly DEFAULT_WAKE_ALARM_PROFILE_NUMBER = 5;
   static readonly DEFAULT_WEBHOOK_API_BIND_HOST = '0.0.0.0';
   static readonly DEFAULT_WEBHOOK_API_PORT = 8585;

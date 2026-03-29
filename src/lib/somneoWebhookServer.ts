@@ -24,12 +24,14 @@ interface AlarmMutationRequest {
 
 interface SimpleWakeAlarm {
   clock: string;
+  dayMask?: number;
   enabled: boolean;
   host: string;
   lightTheme?: number;
   powerWakeEnabled: boolean;
   powerWakeTime?: string;
   profileNumber?: number;
+  repeat?: string;
   sound?: string;
   soundSource?: string;
   sunriseMinutes?: number;
@@ -472,6 +474,7 @@ export class SomneoWebhookServer {
       const { hour, minute } = this.parseTime(request.time);
       updatedSettings.almhr = hour;
       updatedSettings.almmn = minute;
+      this.applyDailyRepeat(updatedSettings);
       changed = true;
 
       if (request.enabled === undefined) {
@@ -578,18 +581,49 @@ export class SomneoWebhookServer {
   private buildSimpleWakeAlarm(clock: SomneoClock, settings: WakeAlarmSettings): SimpleWakeAlarm {
     return {
       clock: clock.Name,
+      dayMask: settings.daynm,
       enabled: settings.prfen === true,
       host: clock.SomneoService.Host,
       lightTheme: settings.ctype,
       powerWakeEnabled: settings.pwrsz === 1,
       powerWakeTime: this.formatTime(settings.pszhr, settings.pszmn),
       profileNumber: settings.prfnr,
+      repeat: this.describeRepeat(settings),
       sound: settings.sndch,
       soundSource: settings.snddv,
       sunriseMinutes: settings.durat,
       time: this.formatTime(settings.almhr, settings.almmn),
       volume: settings.sndlv,
     };
+  }
+
+  private applyDailyRepeat(settings: WakeAlarmSettings): void {
+    settings.ayear = 0;
+    settings.amnth = 0;
+    settings.alday = 0;
+    settings.daynm = SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK;
+  }
+
+  private describeRepeat(settings: WakeAlarmSettings): string {
+
+    if (
+      settings.ayear === 0 &&
+      settings.amnth === 0 &&
+      settings.alday === 0 &&
+      settings.daynm === SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK
+    ) {
+      return 'daily';
+    }
+
+    if ((settings.ayear ?? 0) > 0 || (settings.amnth ?? 0) > 0 || (settings.alday ?? 0) > 0) {
+      return 'singleDate';
+    }
+
+    if ((settings.daynm ?? 0) > 0) {
+      return 'customDays';
+    }
+
+    return 'unknown';
   }
 
   private resolveClock(params: Record<string, unknown>): SomneoClock {
@@ -680,19 +714,35 @@ export class SomneoWebhookServer {
   private parseTime(time: string): { hour: number; minute: number } {
 
     const trimmedTime = time.trim();
-    const twentyFourHourMatch = trimmedTime.match(/^(\d{1,2}):(\d{2})$/);
+    const normalizedTime = trimmedTime
+      .replace(/[\u00A0\u202F]/g, ' ')
+      .replace(/\b([AaPp])\.\s*[Mm]\.?/g, '$1M')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+    const twentyFourHourMatch = normalizedTime.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
     if (twentyFourHourMatch !== null) {
       const hour = Number(twentyFourHourMatch[1]);
       const minute = Number(twentyFourHourMatch[2]);
 
-      if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-        throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
-      }
-
-      return { hour, minute };
+      return this.validateHourAndMinute(time, hour, minute);
     }
 
-    const twelveHourMatch = trimmedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$/);
+    const compactTimeMatch = normalizedTime.match(/^(\d{1,2})(\d{2})$/);
+    if (compactTimeMatch !== null) {
+      const hour = Number(compactTimeMatch[1]);
+      const minute = Number(compactTimeMatch[2]);
+
+      return this.validateHourAndMinute(time, hour, minute);
+    }
+
+    const hourOnlyMatch = normalizedTime.match(/^(\d{1,2})$/);
+    if (hourOnlyMatch !== null) {
+      const hour = Number(hourOnlyMatch[1]);
+      return this.validateHourAndMinute(time, hour, 0);
+    }
+
+    const twelveHourMatch = normalizedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$/);
     if (twelveHourMatch !== null) {
       const twelveHour = Number(twelveHourMatch[1]);
       const minute = Number(twelveHourMatch[2] ?? '0');
@@ -709,7 +759,27 @@ export class SomneoWebhookServer {
       return { hour: normalizedHour, minute };
     }
 
+    if (/[A-Za-z]/.test(normalizedTime) || /[T/-]/.test(normalizedTime) || normalizedTime.includes(',')) {
+      const parsedTimestamp = Date.parse(normalizedTime);
+      if (!Number.isNaN(parsedTimestamp)) {
+        const parsedDate = new Date(parsedTimestamp);
+        return {
+          hour: parsedDate.getHours(),
+          minute: parsedDate.getMinutes(),
+        };
+      }
+    }
+
     throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
+  }
+
+  private validateHourAndMinute(time: string, hour: number, minute: number): { hour: number; minute: number } {
+
+    if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+      throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
+    }
+
+    return { hour, minute };
   }
 
   private formatTime(hour?: number, minute?: number): string | undefined {
