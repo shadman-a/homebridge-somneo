@@ -169,7 +169,7 @@ export class SomneoWebhookServer {
 
       if (method === 'GET' && pathname === `${SomneoWebhookServer.BASE_PATH}/alarm`) {
         const clock = this.resolveClock(params);
-        const alarm = await this.getAlarm(clock);
+        const alarm = await this.getAlarm(clock, params);
         this.writeJson(response, 200, { ok: true, action: 'getAlarm', alarm });
         return;
       }
@@ -463,87 +463,86 @@ export class SomneoWebhookServer {
 
   private async upsertAlarm(clock: SomneoClock, request: AlarmMutationRequest): Promise<SimpleWakeAlarm> {
 
-    const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
-    const updatedSettings: WakeAlarmSettings = {
-      ...currentSettings,
-    };
-    let changed = false;
+    const targetProfileNumber = this.getTargetProfileNumber(request.profileNumber);
+    const currentSettings = await clock.SomneoService.getWakeAlarmSettingsForProfile(targetProfileNumber);
+    const desiredTime = request.time !== undefined ? this.parseTime(request.time) : undefined;
+    const desiredPowerWakeTime = request.powerWakeTime !== undefined ? this.parseTime(request.powerWakeTime) : undefined;
+    const shouldEnable = request.enabled ?? (request.time !== undefined ? true : undefined);
 
-    const targetProfileNumber = request.profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
-    updatedSettings.prfnr = targetProfileNumber;
+    const hasSettingsChange =
+      request.time !== undefined ||
+      request.enabled !== undefined ||
+      request.profileNumber !== undefined ||
+      request.sunriseMinutes !== undefined ||
+      request.lightTheme !== undefined ||
+      request.soundSource !== undefined ||
+      request.sound !== undefined ||
+      request.volume !== undefined ||
+      request.powerWake !== undefined ||
+      request.powerWakeTime !== undefined;
 
-    if (request.time !== undefined) {
-      const { hour, minute } = this.parseTime(request.time);
-      updatedSettings.almhr = hour;
-      updatedSettings.almmn = minute;
-      this.applyDailyRepeat(updatedSettings);
-      changed = true;
-
-      if (request.enabled === undefined) {
-        updatedSettings.prfen = true;
-      }
-    }
-
-    if (request.enabled !== undefined) {
-      updatedSettings.prfen = request.enabled;
-      changed = true;
-    }
-
-    if (request.profileNumber !== undefined) {
-      updatedSettings.prfnr = request.profileNumber;
-      changed = true;
-    }
-
-    if (request.sunriseMinutes !== undefined) {
-      updatedSettings.durat = request.sunriseMinutes;
-      changed = true;
-    }
-
-    if (request.lightTheme !== undefined) {
-      updatedSettings.ctype = request.lightTheme;
-      changed = true;
-    }
-
-    if (request.soundSource !== undefined) {
-      updatedSettings.snddv = request.soundSource;
-      changed = true;
-    }
-
-    if (request.sound !== undefined) {
-      updatedSettings.sndch = request.sound;
-      changed = true;
-    }
-
-    if (request.volume !== undefined) {
-      updatedSettings.sndlv = request.volume;
-      changed = true;
-    }
-
-    if (request.powerWake !== undefined) {
-      updatedSettings.pwrsz = request.powerWake ? 1 : 0;
-      changed = true;
-    }
-
-    if (request.powerWakeTime !== undefined) {
-      const { hour, minute } = this.parseTime(request.powerWakeTime);
-      updatedSettings.pszhr = hour;
-      updatedSettings.pszmn = minute;
-      changed = true;
-    }
-
-    if (!changed && request.snoozeMinutes === undefined) {
+    if (!hasSettingsChange && request.snoozeMinutes === undefined) {
       throw new WebhookBadRequestError('No alarm changes were provided. Set at least one of: time, enabled, sunriseMinutes, lightTheme, soundSource, sound, volume, powerWake, powerWakeTime, or profileNumber.');
     }
 
-    if (changed) {
-      await clock.SomneoService.setWakeAlarmSettings(updatedSettings);
+    if (hasSettingsChange) {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        await clock.SomneoService.ensureWakeAlarmProfileVisible(targetProfileNumber);
+
+        if (desiredTime !== undefined) {
+          await clock.SomneoService.updateWakeAlarmTime(
+            targetProfileNumber,
+            desiredTime.hour,
+            desiredTime.minute,
+            SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK,
+          );
+        }
+
+        if (request.sunriseMinutes !== undefined || request.lightTheme !== undefined) {
+          await clock.SomneoService.updateWakeAlarmLight(
+            targetProfileNumber,
+            request.sunriseMinutes,
+            request.lightTheme,
+          );
+        }
+
+        if (request.soundSource !== undefined || request.sound !== undefined || request.volume !== undefined) {
+          await clock.SomneoService.updateWakeAlarmSound(
+            targetProfileNumber,
+            request.soundSource,
+            request.sound,
+            request.volume,
+          );
+        }
+
+        if (request.powerWake !== undefined || desiredPowerWakeTime !== undefined) {
+          const isPowerWakeEnabled = request.powerWake ?? true;
+          await clock.SomneoService.updateWakeAlarmPowerWake(
+            targetProfileNumber,
+            isPowerWakeEnabled,
+            desiredPowerWakeTime?.hour,
+            desiredPowerWakeTime?.minute,
+          );
+        }
+
+        if (shouldEnable !== undefined) {
+          await clock.SomneoService.updateWakeAlarmEnabled(targetProfileNumber, shouldEnable);
+        }
+
+        const savedSettings = await clock.SomneoService.getWakeAlarmSettingsForProfile(targetProfileNumber);
+        if (this.matchesRequestedAlarm(savedSettings, targetProfileNumber, request, desiredTime, desiredPowerWakeTime, shouldEnable)) {
+          break;
+        }
+
+        await this.delay(150 * attempt);
+      }
     }
 
     if (request.snoozeMinutes !== undefined) {
       await clock.SomneoService.setWakeAlarmSnoozeDuration(request.snoozeMinutes);
     }
 
-    const savedSettings = await clock.SomneoService.getWakeAlarmSettings();
+    const savedSettings = await clock.SomneoService.getWakeAlarmSettingsForProfile(targetProfileNumber);
     return this.buildSimpleWakeAlarm(clock, savedSettings);
   }
 
@@ -554,29 +553,28 @@ export class SomneoWebhookServer {
   ): Promise<SimpleWakeAlarm> {
 
     const profileNumber = this.getNumberValue(params, ['profileNumber', 'prfnr']);
-    const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
-    const targetProfileNumber = profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
+    const targetProfileNumber = this.getTargetProfileNumber(profileNumber);
 
     await clock.SomneoService.updateWakeAlarmEnabled(targetProfileNumber, enabled);
 
-    const savedSettings = await clock.SomneoService.getWakeAlarmSettings();
+    const savedSettings = await clock.SomneoService.getWakeAlarmSettingsForProfile(targetProfileNumber);
     return this.buildSimpleWakeAlarm(clock, savedSettings);
   }
 
   private async clearAlarm(clock: SomneoClock, params: Record<string, unknown>): Promise<SimpleWakeAlarm> {
 
     const profileNumber = this.getNumberValue(params, ['profileNumber', 'prfnr']);
-    const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
-    const targetProfileNumber = profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
+    const targetProfileNumber = this.getTargetProfileNumber(profileNumber);
 
     await clock.SomneoService.clearWakeAlarmProfile(targetProfileNumber);
 
-    const savedSettings = await clock.SomneoService.getWakeAlarmSettings();
+    const savedSettings = await clock.SomneoService.getWakeAlarmSettingsForProfile(targetProfileNumber);
     return this.buildSimpleWakeAlarm(clock, savedSettings);
   }
 
-  private async getAlarm(clock: SomneoClock): Promise<SimpleWakeAlarm> {
-    const settings = await clock.SomneoService.getWakeAlarmSettings();
+  private async getAlarm(clock: SomneoClock, params: Record<string, unknown>): Promise<SimpleWakeAlarm> {
+    const profileNumber = this.getNumberValue(params, ['profileNumber', 'prfnr']);
+    const settings = await clock.SomneoService.getWakeAlarmSettingsForProfile(this.getTargetProfileNumber(profileNumber));
     return this.buildSimpleWakeAlarm(clock, settings);
   }
 
@@ -604,6 +602,81 @@ export class SomneoWebhookServer {
     settings.amnth = 0;
     settings.alday = 0;
     settings.daynm = SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK;
+  }
+
+  private getTargetProfileNumber(profileNumber?: number): number {
+    return profileNumber ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
+  }
+
+  private matchesRequestedAlarm(
+    savedSettings: WakeAlarmSettings,
+    targetProfileNumber: number,
+    request: AlarmMutationRequest,
+    desiredTime: { hour: number; minute: number } | undefined,
+    desiredPowerWakeTime: { hour: number; minute: number } | undefined,
+    shouldEnable: boolean | undefined,
+  ): boolean {
+
+    if (savedSettings.prfnr !== targetProfileNumber) {
+      return false;
+    }
+
+    if (request.time !== undefined) {
+      if (desiredTime === undefined) {
+        return false;
+      }
+
+      if (
+        savedSettings.almhr !== desiredTime.hour ||
+        savedSettings.almmn !== desiredTime.minute ||
+        savedSettings.daynm !== SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK
+      ) {
+        return false;
+      }
+    }
+
+    if (shouldEnable !== undefined && savedSettings.prfen !== shouldEnable) {
+      return false;
+    }
+
+    if (request.sunriseMinutes !== undefined && savedSettings.durat !== request.sunriseMinutes) {
+      return false;
+    }
+
+    if (request.lightTheme !== undefined && savedSettings.ctype !== request.lightTheme) {
+      return false;
+    }
+
+    if (request.soundSource !== undefined && savedSettings.snddv !== request.soundSource) {
+      return false;
+    }
+
+    if (request.sound !== undefined && savedSettings.sndch !== request.sound) {
+      return false;
+    }
+
+    if (request.volume !== undefined && savedSettings.sndlv !== request.volume) {
+      return false;
+    }
+
+    if (request.powerWake !== undefined || request.powerWakeTime !== undefined) {
+      const expectedPowerWakeEnabled = request.powerWake ?? true;
+      if ((savedSettings.pwrsz === 1) !== expectedPowerWakeEnabled) {
+        return false;
+      }
+
+      if (expectedPowerWakeEnabled && desiredPowerWakeTime !== undefined) {
+        if (savedSettings.pszhr !== desiredPowerWakeTime.hour || savedSettings.pszmn !== desiredPowerWakeTime.minute) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
+  private async delay(milliseconds: number): Promise<void> {
+    await new Promise(resolve => setTimeout(resolve, milliseconds));
   }
 
   private describeRepeat(settings: WakeAlarmSettings): string {

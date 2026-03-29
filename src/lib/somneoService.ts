@@ -52,6 +52,16 @@ export class SomneoService {
     return this.getData<WakeAlarmSettings>(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
   }
 
+  async getWakeAlarmSettingsForProfile(profileNumber: number): Promise<WakeAlarmSettings> {
+
+    const data: WakeAlarmRootSettings = { prfnr: profileNumber };
+    return this.putDataForResponse<WakeAlarmRootSettings, WakeAlarmSettings>(
+      SomneoConstants.URI_WAKE_ALARM_ROOT_ENDPOINT,
+      data,
+      SomneoConstants.TYPE_WAKE_ALARM_SETTINGS,
+    );
+  }
+
   async turnOffAudioDevice(): Promise<void> {
 
     const data: AudioDeviceSettings = { onoff: false };
@@ -174,13 +184,107 @@ export class SomneoService {
 
   async updateWakeAlarmEnabled(profileNumber: number, isEnabled: boolean): Promise<void> {
 
-    const data: WakeAlarmSettings = { prfen: isEnabled, prfnr: profileNumber };
+    const data: WakeAlarmSettings = { prfen: isEnabled, prfnr: profileNumber, prfvs: true };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async ensureWakeAlarmProfileVisible(profileNumber: number): Promise<void> {
+
+    const data: WakeAlarmSettings = { prfnr: profileNumber, prfvs: true };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async updateWakeAlarmTime(profileNumber: number, hour: number, minute: number, dayMask: number): Promise<void> {
+
+    const data: WakeAlarmSettings = {
+      prfnr: profileNumber,
+      almhr: hour,
+      almmn: minute,
+      daynm: dayMask,
+    };
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async updateWakeAlarmLight(profileNumber: number, duration?: number, lightTheme?: number): Promise<void> {
+
+    const data: WakeAlarmSettings = { prfnr: profileNumber };
+    let hasChanges = false;
+
+    if (duration !== undefined) {
+      data.durat = duration;
+      hasChanges = true;
+    }
+
+    if (lightTheme !== undefined) {
+      data.ctype = lightTheme;
+      hasChanges = true;
+    }
+
+    if (!hasChanges) {
+      return;
+    }
+
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async updateWakeAlarmSound(profileNumber: number, soundSource?: string, sound?: string, volume?: number): Promise<void> {
+
+    const data: WakeAlarmSettings = { prfnr: profileNumber };
+    let hasChanges = false;
+
+    if (soundSource !== undefined) {
+      data.snddv = soundSource;
+      hasChanges = true;
+    }
+
+    if (sound !== undefined) {
+      data.sndch = sound;
+      hasChanges = true;
+    }
+
+    if (volume !== undefined) {
+      data.sndlv = volume;
+      hasChanges = true;
+    }
+
+    if (!hasChanges) {
+      return;
+    }
+
+    return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+  }
+
+  async updateWakeAlarmPowerWake(profileNumber: number, isEnabled: boolean, hour?: number, minute?: number): Promise<void> {
+
+    const data: WakeAlarmSettings = {
+      prfnr: profileNumber,
+      pwrsz: isEnabled ? 1 : 0,
+      pszhr: isEnabled ? (hour ?? 0) : 0,
+      pszmn: isEnabled ? (minute ?? 0) : 0,
+    };
+
     return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
   }
 
   async clearWakeAlarmProfile(profileNumber: number): Promise<void> {
 
-    const data: WakeAlarmSettings = { prfen: false, prfnr: profileNumber, prfvs: false };
+    const data: WakeAlarmSettings = {
+      prfnr: profileNumber,
+      prfen: false,
+      prfvs: false,
+      almhr: 7,
+      almmn: 30,
+      pwrsz: 0,
+      pszhr: 0,
+      pszmn: 0,
+      ctype: 0,
+      curve: 20,
+      durat: 30,
+      daynm: SomneoConstants.DEFAULT_WAKE_ALARM_DAILY_DAY_MASK,
+      snddv: 'wus',
+      sndch: '1',
+      sndlv: 12,
+    };
 
     try {
       await this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
@@ -238,5 +342,22 @@ export class SomneoService {
     await retryAsync(() => this.httpsClient
       .put(uri, data)
       .then(res => res.data), SomneoConstants.DEFAULT_RETRY_OPTIONS);
+  }
+
+  private async putDataForResponse<T, R>(uri: string, data: T, type: string): Promise<R> {
+
+    if (data === undefined) {
+      throw new Error(`HTTP Put -> type=${type} host=${this.Host} data cannot be undefined`);
+    }
+
+    this.log.debug(`HTTP Put -> type=${type} host=${this.Host} data=${JSON.stringify(data)}`);
+
+    return retryAsync(() => this.httpsClient
+      .put(uri, data)
+      .then(res => res.data as R), SomneoConstants.DEFAULT_RETRY_OPTIONS)
+      .then(responseData => {
+        this.log.debug(`HTTP Put <- type=${type} host=${this.Host} data=${JSON.stringify(responseData)}`);
+        return responseData;
+      });
   }
 }
