@@ -44,7 +44,6 @@ interface WebhookApiResponse {
   availableClocks?: { host: string; name: string }[];
   basePath?: string;
   clock?: { host: string; name: string };
-  deleteMode?: string;
   endpoints?: {
     body?: Record<string, unknown>;
     description: string;
@@ -205,25 +204,15 @@ export class SomneoWebhookServer {
 
       if ((method === 'POST' || method === 'GET') && pathname === `${SomneoWebhookServer.BASE_PATH}/alarm/delete`) {
         const clock = this.resolveClock(params);
-        const alarm = await this.setAlarmEnabled(clock, false, params);
-        this.writeJson(response, 200, {
-          ok: true,
-          action: 'deleteAlarm',
-          alarm,
-          deleteMode: 'disableCurrentWakeProfile',
-        });
+        const alarm = await this.clearAlarm(clock, params);
+        this.writeJson(response, 200, { ok: true, action: 'deleteAlarm', alarm });
         return;
       }
 
       if (method === 'DELETE' && pathname === `${SomneoWebhookServer.BASE_PATH}/alarm`) {
         const clock = this.resolveClock(params);
-        const alarm = await this.setAlarmEnabled(clock, false, params);
-        this.writeJson(response, 200, {
-          ok: true,
-          action: 'deleteAlarm',
-          alarm,
-          deleteMode: 'disableCurrentWakeProfile',
-        });
+        const alarm = await this.clearAlarm(clock, params);
+        this.writeJson(response, 200, { ok: true, action: 'deleteAlarm', alarm });
         return;
       }
 
@@ -298,6 +287,7 @@ export class SomneoWebhookServer {
             clock: 'Bedroom',
             time: '07:00',
             enabled: true,
+            profileNumber: 5,
             sunriseMinutes: 30,
             lightTheme: 0,
             soundSource: 'wus',
@@ -326,7 +316,7 @@ export class SomneoWebhookServer {
         {
           method: 'DELETE',
           path: `${SomneoWebhookServer.BASE_PATH}/alarm?clock=Bedroom`,
-          description: 'Delete alias. This disables the current Somneo wake alarm profile and leaves its saved settings intact.',
+          description: 'Clear the shortcut-managed Somneo wake profile for reuse. Falls back to disabling the profile if the device rejects the stronger clear request.',
         },
         {
           method: 'POST',
@@ -563,6 +553,18 @@ export class SomneoWebhookServer {
     const targetProfileNumber = profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
 
     await clock.SomneoService.updateWakeAlarmEnabled(targetProfileNumber, enabled);
+
+    const savedSettings = await clock.SomneoService.getWakeAlarmSettings();
+    return this.buildSimpleWakeAlarm(clock, savedSettings);
+  }
+
+  private async clearAlarm(clock: SomneoClock, params: Record<string, unknown>): Promise<SimpleWakeAlarm> {
+
+    const profileNumber = this.getNumberValue(params, ['profileNumber', 'prfnr']);
+    const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
+    const targetProfileNumber = profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
+
+    await clock.SomneoService.clearWakeAlarmProfile(targetProfileNumber);
 
     const savedSettings = await clock.SomneoService.getWakeAlarmSettings();
     return this.buildSimpleWakeAlarm(clock, savedSettings);

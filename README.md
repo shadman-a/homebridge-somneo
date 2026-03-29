@@ -299,7 +299,7 @@ If `webhookApi.token` is configured, include it in one of these ways:
 | `POST` / `PUT` | `/somneo/v1/alarm` | Create or update the current Somneo wake alarm with JSON. |
 | `POST` / `GET` | `/somneo/v1/alarm/enable` | Arm the current wake alarm profile. |
 | `POST` / `GET` | `/somneo/v1/alarm/disable` | Disarm the current wake alarm profile. |
-| `DELETE` | `/somneo/v1/alarm` | Delete alias. This disables the current wake alarm profile and keeps the saved settings. |
+| `DELETE` | `/somneo/v1/alarm` | Clears the shortcut-managed wake profile for reuse. Falls back to disabling it if the device rejects the stronger clear request. |
 | `POST` / `GET` | `/somneo/v1/alarm/delete` | Same as `DELETE /somneo/v1/alarm`. |
 | `POST` / `GET` | `/somneo/v1/alarm/snooze` | Sends the native Somneo snooze action. |
 | `POST` / `GET` | `/somneo/v1/alarm/dismiss` | Sends the native Somneo dismiss action. |
@@ -314,6 +314,7 @@ If `webhookApi.token` is configured, include it in one of these ways:
   "clock": "Bedroom Somneo",
   "time": "07:00",
   "enabled": true,
+  "profileNumber": 5,
   "sunriseMinutes": 30,
   "lightTheme": 0,
   "soundSource": "wus",
@@ -329,6 +330,7 @@ Supported fields:
 - `clock`: optional when only one Somneo is configured
 - `time`: `HH:MM` in 24-hour format or `h:MM AM/PM`
 - `enabled`: `true` or `false`
+- `profileNumber`: optional wake-profile slot number; defaults to the current profile or `5`
 - `sunriseMinutes`: Somneo sunrise ramp duration
 - `lightTheme`: native Somneo light theme value
 - `soundSource`: native sound source value such as `wus`
@@ -347,7 +349,7 @@ Create or update an alarm with a plain URL:
 http://homebridge.local:8585/somneo/v1/alarm/set?time=07:00&token=replace-me
 ```
 
-Disable the current alarm:
+Clear the current shortcut-managed alarm for reuse:
 
 ```text
 http://homebridge.local:8585/somneo/v1/alarm/delete?token=replace-me

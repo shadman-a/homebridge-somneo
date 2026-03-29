@@ -178,6 +178,19 @@ export class SomneoService {
     return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
   }
 
+  async clearWakeAlarmProfile(profileNumber: number): Promise<void> {
+
+    const data: WakeAlarmSettings = { prfen: false, prfnr: profileNumber, prfvs: false };
+
+    try {
+      await this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, data, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.log.debug(`HTTP Put -> clear wake alarm fallback host=${this.Host} profileNumber=${profileNumber} error=${message}`);
+      await this.updateWakeAlarmEnabled(profileNumber, false);
+    }
+  }
+
   async setWakeAlarmSettings(wakeAlarmSettings: WakeAlarmSettings): Promise<void> {
     return this.putData(SomneoConstants.URI_WAKE_ALARM_ENDPOINT, wakeAlarmSettings, SomneoConstants.TYPE_WAKE_ALARM_SETTINGS);
   }
