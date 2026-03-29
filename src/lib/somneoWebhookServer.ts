@@ -472,8 +472,11 @@ export class SomneoWebhookServer {
   private async upsertAlarm(clock: SomneoClock, request: AlarmMutationRequest): Promise<SimpleWakeAlarm> {
 
     const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
-    const updatedSettings: WakeAlarmSettings = { ...currentSettings };
+    const updatedSettings: WakeAlarmSettings = {};
     let changed = false;
+
+    const targetProfileNumber = request.profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
+    updatedSettings.prfnr = targetProfileNumber;
 
     if (request.time !== undefined) {
       const { hour, minute } = this.parseTime(request.time);
@@ -535,10 +538,6 @@ export class SomneoWebhookServer {
 
     if (!changed && request.snoozeMinutes === undefined) {
       throw new WebhookBadRequestError('No alarm changes were provided. Set at least one of: time, enabled, sunriseMinutes, lightTheme, soundSource, sound, volume, powerWake, powerWakeTime, or profileNumber.');
-    }
-
-    if (updatedSettings.prfnr === undefined) {
-      updatedSettings.prfnr = SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
     }
 
     if (changed) {
