@@ -464,7 +464,9 @@ export class SomneoWebhookServer {
   private async upsertAlarm(clock: SomneoClock, request: AlarmMutationRequest): Promise<SimpleWakeAlarm> {
 
     const currentSettings = await clock.SomneoService.getWakeAlarmSettings();
-    const updatedSettings: WakeAlarmSettings = {};
+    const updatedSettings: WakeAlarmSettings = {
+      ...currentSettings,
+    };
     let changed = false;
 
     const targetProfileNumber = request.profileNumber ?? currentSettings.prfnr ?? SomneoConstants.DEFAULT_WAKE_ALARM_PROFILE_NUMBER;
