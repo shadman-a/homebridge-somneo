@@ -1,7 +1,7 @@
 {
   "displayName": "Homebridge Sleep Wake",
   "name": "homebridge-sleep-wake",
-  "version": "1.7.2",
+  "version": "1.7.3",
   "description": "A Homebridge plugin to control Philips Sleep and Wake clocks, including Somneo wake alarms.",
   "license": "Apache-2.0",
   "repository": {

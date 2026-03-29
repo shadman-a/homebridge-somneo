@@ -295,7 +295,7 @@ If `webhookApi.token` is configured, include it in one of these ways:
 | `GET` | `/somneo/v1/health` | Health check for the local API server. |
 | `GET` | `/somneo/v1/clocks` | Lists configured Somneo clocks. |
 | `GET` | `/somneo/v1/alarm` | Reads the current Somneo wake alarm. |
-| `GET` | `/somneo/v1/alarm/set?time=07:00` | Shortcut-friendly create/update endpoint using query parameters. |
+| `GET` | `/somneo/v1/alarm/set?time=07:00` | Shortcut-friendly create/update endpoint using query parameters. Accepts `07:00` or `7:00 AM/PM`. |
 | `POST` / `PUT` | `/somneo/v1/alarm` | Create or update the current Somneo wake alarm with JSON. |
 | `POST` / `GET` | `/somneo/v1/alarm/enable` | Arm the current wake alarm profile. |
 | `POST` / `GET` | `/somneo/v1/alarm/disable` | Disarm the current wake alarm profile. |
@@ -327,7 +327,7 @@ If `webhookApi.token` is configured, include it in one of these ways:
 Supported fields:
 
 - `clock`: optional when only one Somneo is configured
-- `time`: `HH:MM` in 24-hour format
+- `time`: `HH:MM` in 24-hour format or `h:MM AM/PM`
 - `enabled`: `true` or `false`
 - `sunriseMinutes`: Somneo sunrise ramp duration
 - `lightTheme`: native Somneo light theme value
@@ -335,7 +335,7 @@ Supported fields:
 - `sound`: native sound/channel value such as `1`
 - `volume`: native Somneo sound level
 - `powerWake`: `true` or `false`
-- `powerWakeTime`: `HH:MM` in 24-hour format
+- `powerWakeTime`: `HH:MM` in 24-hour format or `h:MM AM/PM`
 
 If you set `time` and omit `enabled`, the plugin will automatically arm the alarm.
 

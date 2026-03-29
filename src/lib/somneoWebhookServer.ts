@@ -679,18 +679,36 @@ export class SomneoWebhookServer {
   private parseTime(time: string): { hour: number; minute: number } {
 
     const trimmedTime = time.trim();
-    const match = trimmedTime.match(/^(\d{1,2}):(\d{2})$/);
-    if (match === null) {
-      throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM in 24-hour format.`);
+    const twentyFourHourMatch = trimmedTime.match(/^(\d{1,2}):(\d{2})$/);
+    if (twentyFourHourMatch !== null) {
+      const hour = Number(twentyFourHourMatch[1]);
+      const minute = Number(twentyFourHourMatch[2]);
+
+      if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+        throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
+      }
+
+      return { hour, minute };
     }
 
-    const hour = Number(match[1]);
-    const minute = Number(match[2]);
-    if (!Number.isInteger(hour) || !Number.isInteger(minute) || hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-      throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM in 24-hour format.`);
+    const twelveHourMatch = trimmedTime.match(/^(\d{1,2})(?::(\d{2}))?\s*([AaPp][Mm])$/);
+    if (twelveHourMatch !== null) {
+      const twelveHour = Number(twelveHourMatch[1]);
+      const minute = Number(twelveHourMatch[2] ?? '0');
+      const meridiem = twelveHourMatch[3].toUpperCase();
+
+      if (!Number.isInteger(twelveHour) || !Number.isInteger(minute) || twelveHour < 1 || twelveHour > 12 || minute < 0 || minute > 59) {
+        throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
+      }
+
+      const normalizedHour = meridiem === 'AM'
+        ? (twelveHour === 12 ? 0 : twelveHour)
+        : (twelveHour === 12 ? 12 : twelveHour + 12);
+
+      return { hour: normalizedHour, minute };
     }
 
-    return { hour, minute };
+    throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
   }
 
   private formatTime(hour?: number, minute?: number): string | undefined {
