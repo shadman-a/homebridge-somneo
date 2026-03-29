@@ -760,14 +760,24 @@ export class SomneoWebhookServer {
     }
 
     if (/[A-Za-z]/.test(normalizedTime) || /[T/-]/.test(normalizedTime) || normalizedTime.includes(',')) {
-      const parsedTimestamp = Date.parse(normalizedTime);
-      if (!Number.isNaN(parsedTimestamp)) {
+      const parseCandidates = [
+        normalizedTime,
+        normalizedTime.replace(/\s+at\s+/i, ', '),
+      ];
+
+      for (const candidate of parseCandidates) {
+        const parsedTimestamp = Date.parse(candidate);
+        if (Number.isNaN(parsedTimestamp)) {
+          continue;
+        }
+
         const parsedDate = new Date(parsedTimestamp);
         return {
           hour: parsedDate.getHours(),
           minute: parsedDate.getMinutes(),
         };
       }
+
     }
 
     throw new WebhookBadRequestError(`Invalid time "${time}". Use HH:MM or h:MM AM/PM.`);
